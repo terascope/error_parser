@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Generic error parser",
   "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "lint": "eslint *.js spec/**/*.js",
     "lint:fix": "eslint --fix *.js spec/**/*.js",
