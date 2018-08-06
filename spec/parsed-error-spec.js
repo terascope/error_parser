@@ -5,7 +5,7 @@ const ParsedError = require('../lib/parsed-error');
 describe('ParsedError', () => {
     describe('when constructed with nothing', () => {
         it('should a "Unknown Error Occurred" error', () => {
-            expect(new ParsedError().toString()).toEqual('ParsedError: Unknown Error Occurred');
+            expect(new ParsedError().toString()).toMatch('ParsedError: Unknown Error Occurred');
         });
     });
 
@@ -42,8 +42,19 @@ describe('ParsedError', () => {
                 expect(error.info).toEqual({});
             });
 
-            it('should have fullStack property that equals the stack message', () => {
-                expect(error.fullStack).toEqual(error.stack);
+            it('should convert into a string that equals the stack message', () => {
+                expect(error.toString()).toEqual(error.stack);
+            });
+
+            it('should convert into JSON', () => {
+                expect(error.toJSON()).toEqual({
+                    info: error.info,
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    statusCode: error.statusCode,
+                    causes: []
+                });
             });
         });
 
@@ -84,8 +95,19 @@ describe('ParsedError', () => {
                 expect(error.info).toEqual({ example: true });
             });
 
-            it('should have fullStack property that equals the stack message', () => {
-                expect(error.fullStack).toEqual(error.stack);
+            it('should convert into a string that equals the stack message', () => {
+                expect(error.toString()).toEqual(error.stack);
+            });
+
+            it('should convert into JSON', () => {
+                expect(error.toJSON()).toEqual({
+                    info: error.info,
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    statusCode: error.statusCode,
+                    causes: []
+                });
             });
         });
 
@@ -139,8 +161,21 @@ describe('ParsedError', () => {
                 });
             });
 
-            it('should have a stack property that contains two stacks', () => {
-                expect(error.fullStack).toEqual(`${error.stack}\nCaused by: ${cause.stack}`);
+            it('should convert into a string that contains two stacks', () => {
+                expect(error.toString()).toEqual(`${error.stack}\nCaused by: ${cause.stack}`);
+            });
+
+            it('should convert into JSON', () => {
+                expect(error.toJSON()).toEqual({
+                    info: error.info,
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    statusCode: error.statusCode,
+                    causes: [
+                        cause.stack,
+                    ]
+                });
             });
         });
 
@@ -159,10 +194,7 @@ describe('ParsedError', () => {
 
                 cause2 = new ParsedError('Howdy there!', {
                     userError: true,
-                    cause,
-                    info: {
-                        example: 'howdy',
-                    }
+                    cause
                 });
 
                 error = new ParsedError('Bad news bears', {
@@ -211,18 +243,34 @@ describe('ParsedError', () => {
                 });
             });
 
-            it('should have a fullStack property that contains one stack and a toString error', () => {
-                expect(error.fullStack).toEqual(`${error.stack}, caused by: ${cause2.toString()}, caused by: ${cause.toString()}`);
+            it('should convert into a string contains one stack and a toString error', () => {
+                expect(error.toString()).toEqual(`${error.stack}, caused by, ${cause2.name}: ${cause2.message}, caused by, ${cause.name}: ${cause.message}`);
+            });
+
+            it('should convert into JSON', () => {
+                expect(error.toJSON()).toEqual({
+                    info: error.info,
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    statusCode: error.statusCode,
+                    causes: [
+                        `${cause2.name}: ${cause2.message}`,
+                        `${cause.name}: ${cause.message}`,
+                    ]
+                });
             });
         });
     });
 
     describe('when it is a user-error', () => {
-        describe('when called with just a string', () => {
+        describe('when called with a status code', () => {
             let error;
 
             beforeAll(() => {
-                error = new ParsedError('Bad news bears', { userError: true });
+                error = new ParsedError('Bad news bears', {
+                    statusCode: 422,
+                });
             });
 
             it('should have the default name', () => {
@@ -238,7 +286,7 @@ describe('ParsedError', () => {
             });
 
             it('should be a user error', () => {
-                expect(error.statusCode).toEqual(400);
+                expect(error.statusCode).toEqual(422);
                 expect(error.userError).toEqual(true);
             });
 
@@ -250,8 +298,18 @@ describe('ParsedError', () => {
                 expect(error.info).toEqual({});
             });
 
-            it('should have fullStack property that equals error.toString()', () => {
-                expect(error.fullStack).toEqual(error.toString());
+            it('should convert into a string that equals error.toString()', () => {
+                expect(error.toString()).toEqual(`${error.name}: ${error.message}`);
+            });
+
+            it('should convert into JSON', () => {
+                expect(error.toJSON()).toEqual({
+                    info: error.info,
+                    name: error.name,
+                    message: error.message,
+                    statusCode: error.statusCode,
+                    causes: []
+                });
             });
         });
 
@@ -311,8 +369,20 @@ describe('ParsedError', () => {
                 });
             });
 
-            it('should have a fullStack property that containg just the error messages', () => {
-                expect(error.fullStack).toEqual(`${error.toString()}, caused by: ${cause.toString()}`);
+            it('should convert into a string that contains just the error messages', () => {
+                expect(error.toString()).toEqual(`${error.name}: ${error.message}, caused by, ${cause.name}: ${cause.message}`);
+            });
+
+            it('should convert into JSON', () => {
+                expect(error.toJSON()).toEqual({
+                    info: error.info,
+                    name: error.name,
+                    message: error.message,
+                    statusCode: error.statusCode,
+                    causes: [
+                        `${cause.name}: ${cause.message}`,
+                    ]
+                });
             });
         });
     });
