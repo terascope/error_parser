@@ -2,12 +2,15 @@
 
 const ParsedError = require('..');
 
-describe('error_parser', () => {
+describe('ParsedError (legacy)', () => {
     it('can parse regular errors', () => {
         const message = 'i am an error';
         const error = new Error(message);
 
-        expect(new ParsedError(error).cause.stack).toEqual(error.stack);
+        const parsedError = new ParsedError(error);
+
+        expect(parsedError.message).toEqual(message);
+        expect(parsedError.cause.stack).toEqual(error.stack);
     });
 
     it('can handle other error responses or return error as it', () => {
@@ -39,6 +42,20 @@ describe('error_parser', () => {
             }
         };
         const expectedErrorMsg = `error: index_not_found_exception, could not find index: ${errorData.body.error.index}`;
+        expect(new ParsedError(errorData).message).toEqual(expectedErrorMsg);
+    });
+
+    it('can return better error messages unknown elastic search errors', () => {
+        const errorData = {
+            toJSON() { return { idk: true }; },
+            body: {
+                error: {
+                    type: 'idk_error_found',
+                    index: 'some_error_idk'
+                }
+            }
+        };
+        const expectedErrorMsg = `Unknown ES Error Format ${JSON.stringify(errorData)}`;
         expect(new ParsedError(errorData).message).toEqual(expectedErrorMsg);
     });
 
