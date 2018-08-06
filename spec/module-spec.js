@@ -1,42 +1,36 @@
 'use strict';
 
-const errorParser = require('../index.js');
+const ParsedError = require('..');
 
 describe('error_parser', () => {
-
-    it('returns a function', () =>{
-        expect(typeof errorParser).toEqual('function')
-    });
-
     it('can parse regular errors', () => {
         const message = 'i am an error';
         const error = new Error(message);
-        const parsedError= errorParser(error);
 
-        expect(parsedError).toEqual(error.stack)
+        expect(new ParsedError(error).cause.stack).toEqual(error.stack);
     });
 
     it('can handle other error responses or return error as it', () => {
         const responseError = { response: 'i am an error response' };
         const other = 'i return as is';
 
-        expect(errorParser(responseError)).toEqual(responseError.response);
-        expect(errorParser(other)).toEqual(other);
+        expect(new ParsedError(responseError).message).toEqual(responseError.response);
+        expect(new ParsedError(other).message).toEqual(other);
     });
 
     it('can handle elasticsearch errors', () => {
-       const msg = 'i am a elasticsearch error';
-       const errorData = {
-            toJSON(){ return { msg }}
+        const msg = 'i am a elasticsearch error';
+        const errorData = {
+            toJSON() { return { msg }; }
         };
 
-       expect(errorParser(errorData)).toEqual(msg)
+        expect(new ParsedError(errorData).message).toEqual(msg);
     });
 
     it('can return better error messages for index not found errors', () => {
         const msg = 'i am a elasticsearch error';
         const errorData = {
-            toJSON(){ return { msg }},
+            toJSON() { return { msg }; },
             body: {
                 error: {
                     type: 'index_not_found_exception',
@@ -44,8 +38,8 @@ describe('error_parser', () => {
                 }
             }
         };
-        const expectedErrorMsg = `error: index_not_found_exception, could not find index: ${errorData.body.error.index}`
-        expect(errorParser(errorData)).toEqual(expectedErrorMsg)
+        const expectedErrorMsg = `error: index_not_found_exception, could not find index: ${errorData.body.error.index}`;
+        expect(new ParsedError(errorData).message).toEqual(expectedErrorMsg);
     });
 
     it('can return better error messages for search errors', () => {
@@ -56,7 +50,7 @@ describe('error_parser', () => {
             reason: 'justBecause'
         };
         const errorData = {
-            toJSON(){ return { msg }},
+            toJSON() { return { msg }; },
             body: {
                 error: {
                     type: 'search_phase_execution_exception',
@@ -65,22 +59,25 @@ describe('error_parser', () => {
             }
         };
         const expectedErrorMsg = `error: ${cause.type} ${cause.reason} on index: ${cause.index}`;
-        expect(errorParser(errorData)).toEqual(expectedErrorMsg)
-    })
+        expect(new ParsedError(errorData).message).toEqual(expectedErrorMsg);
+    });
 
     it('will truncate error messages to 5k length', () => {
         const msg = 'i am a elasticsearch error';
         let longErrorMsg = '';
 
-        while (longErrorMsg.length < 5000){
+        while (longErrorMsg.length < 6000) {
             longErrorMsg += 'a';
         }
 
-        expect(errorParser(msg)).toEqual(msg)
-        expect(errorParser(msg).length).toEqual(msg.length)
+        const shortError = new ParsedError(msg);
+        expect(shortError.message).toEqual(msg);
+        expect(shortError.message.length).toEqual(msg.length);
 
-        expect(errorParser(longErrorMsg)).toEqual(`${longErrorMsg} ...`);
-        expect(errorParser(longErrorMsg).length).toEqual(longErrorMsg.length + 4)
-    })
+        const longError = new ParsedError(longErrorMsg);
+        const expected = `${longErrorMsg.substring(0, 5000 - 3)}...`;
 
+        expect(longError.message).toEqual(expected);
+        expect(longError.message.length).toEqual(5000);
+    });
 });
